@@ -107,6 +107,7 @@ async def health():
 
 
 @app.get("/tools")
+@app.post("/tools")
 async def list_tools(authorization: Optional[str] = Header(None)) -> ToolListResponse:
     """
     List all available tools.
