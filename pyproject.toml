@@ -1,0 +1,28 @@
+[project]
+name = "analyse-cv"
+version = "1.0.0"
+description = "Analyse et compare automatiquement 5 CV par rapport à une fiche de poste, en évaluant chaque candidat selon des critères pondérés et génère un rapport professionnel avec scores et recommandations."
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "mcp>=1.0.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
