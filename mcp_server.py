@@ -48,14 +48,23 @@ PARADIGM_BASE_URL = os.getenv("PARADIGM_BASE_URL", "https://paradigm.lighton.ai"
 # Request/Response models
 class AnalyseRequest(BaseModel):
     """Request model for CV analysis"""
-    file_paths: List[str] = Field(
-        ...,
+    file_paths: Optional[List[str]] = Field(
+        None,
         description="Chemins complets des fichiers locaux a analyser (ex: C:\\Documents\\cv.pdf)"
+    )
+    file_ids: Optional[List[int]] = Field(
+        None,
+        description="IDs des documents Paradigm a analyser"
     )
     query: Optional[str] = Field(
         None,
         description="Question ou demande d'analyse (optionnel)"
     )
+
+    def model_post_init(self, __context) -> None:
+        """Validate that at least one file input method is provided"""
+        if not self.file_paths and not self.file_ids:
+            raise ValueError("Either file_paths or file_ids must be provided")
 
 
 class AnalyseResponse(BaseModel):
@@ -86,7 +95,11 @@ async def analyse_cv(request: AnalyseRequest) -> AnalyseResponse:
                 detail="PARADIGM_API_KEY not configured on server"
             )
 
-        logger.info(f"Executing workflow for {len(request.file_paths)} files")
+        # Determine input mode and log
+        if request.file_paths:
+            logger.info(f"Executing workflow with {len(request.file_paths)} file paths")
+        elif request.file_ids:
+            logger.info(f"Executing workflow with {len(request.file_ids)} file IDs")
 
         # Initialize Paradigm client
         paradigm_client = ParadigmClient(
@@ -97,11 +110,14 @@ async def analyse_cv(request: AnalyseRequest) -> AnalyseResponse:
         # Initialize workflow executor
         executor = WorkflowExecutor(paradigm_client)
 
-        # Execute workflow
-        result = await executor.execute(
-            file_paths=request.file_paths,
-            query=request.query
-        )
+        # Execute workflow with appropriate parameters
+        exec_params = {"query": request.query}
+        if request.file_paths:
+            exec_params["file_paths"] = request.file_paths
+        if request.file_ids:
+            exec_params["file_ids"] = request.file_ids
+
+        result = await executor.execute(**exec_params)
 
         logger.info("Workflow execution completed successfully")
 
