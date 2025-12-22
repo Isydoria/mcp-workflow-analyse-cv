@@ -1025,7 +1025,8 @@ class ParadigmClient:
             async with session.get(url, headers=headers, params=params) as response:
                 if response.status == 200:
                     result = await response.json()
-                    files = result if isinstance(result, list) else result.get('files', [])
+                    # API returns: {"object": "list", "data": [...], "count": N}
+                    files = result.get('data', [])
                     logger.info(f"✅ Retrieved {len(files)} files")
                     return files
                 else:
