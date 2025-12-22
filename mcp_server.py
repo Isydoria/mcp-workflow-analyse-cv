@@ -192,20 +192,29 @@ async def analyse_cv(request: AnalyseRequest) -> AnalyseResponse:
             file_ids_to_use = request.file_ids
 
         elif request.file_paths:
-            # Check if file_paths are actually Paradigm document names (no path separators)
-            are_paradigm_names = all('/' not in fp and '\\' not in fp for fp in request.file_paths)
+            # WORKAROUND: Check if file_paths contains numeric strings (IDs passed incorrectly by Paradigm)
+            are_numeric_ids = all(fp.isdigit() for fp in request.file_paths)
 
-            if are_paradigm_names:
-                # These are Paradigm document names, search for them
-                logger.info(f"Detected {len(request.file_paths)} Paradigm document names, searching for IDs...")
-                file_ids_to_use = await _resolve_paradigm_filenames(
-                    paradigm_client,
-                    request.file_paths
-                )
-                logger.info(f"Resolved to file IDs: {file_ids_to_use}")
+            if are_numeric_ids:
+                # Paradigm bug: IDs passed as strings in file_paths instead of as integers in file_ids
+                logger.info(f"⚠️ WORKAROUND: Detected {len(request.file_paths)} numeric IDs in file_paths (Paradigm bug)")
+                file_ids_to_use = [int(fp) for fp in request.file_paths]
+                logger.info(f"✅ Converted to file IDs: {file_ids_to_use}")
             else:
-                # These are actual file paths, pass them as-is
-                logger.info(f"Using {len(request.file_paths)} local file paths")
+                # Check if file_paths are actually Paradigm document names (no path separators)
+                are_paradigm_names = all('/' not in fp and '\\' not in fp for fp in request.file_paths)
+
+                if are_paradigm_names:
+                    # These are Paradigm document names, search for them
+                    logger.info(f"Detected {len(request.file_paths)} Paradigm document names, searching for IDs...")
+                    file_ids_to_use = await _resolve_paradigm_filenames(
+                        paradigm_client,
+                        request.file_paths
+                    )
+                    logger.info(f"Resolved to file IDs: {file_ids_to_use}")
+                else:
+                    # These are actual file paths, pass them as-is
+                    logger.info(f"Using {len(request.file_paths)} local file paths")
 
         # Initialize workflow executor
         executor = WorkflowExecutor(paradigm_client)
