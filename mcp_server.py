@@ -40,6 +40,9 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Initialize MCP server (must be done before defining tools)
+mcp = FastApiMCP(app)
+
 # Server configuration
 PARADIGM_API_KEY = os.getenv("PARADIGM_API_KEY")
 PARADIGM_BASE_URL = os.getenv("PARADIGM_BASE_URL", "https://paradigm.lighton.ai")
@@ -124,6 +127,7 @@ async def _resolve_paradigm_filenames(
     return file_ids
 
 
+@mcp.tool()
 async def analyse_cv(request: AnalyseRequest) -> AnalyseResponse:
     """
     Analyse and compare CVs against a job description.
@@ -203,9 +207,8 @@ async def health():
     return {"status": "healthy"}
 
 
-# Initialize and mount MCP server
-mcp = FastApiMCP(app)
-mcp.mount_http()  # This mounts the MCP protocol at /mcp endpoint
+# Mount MCP HTTP endpoint
+mcp.mount_http()
 
 logger.info("MCP server mounted at /mcp endpoint")
 logger.info(f"Paradigm API URL: {PARADIGM_BASE_URL}")
