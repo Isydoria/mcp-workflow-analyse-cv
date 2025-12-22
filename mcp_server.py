@@ -101,11 +101,11 @@ async def _resolve_paradigm_filenames(
     for filename in filenames:
         try:
             # Use document search to find the file
-            # Search for exact filename in user's private collection
+            # Search for exact filename in user's private documents
             search_results = await paradigm_client.document_search(
-                query=f"filename:{filename}",
-                collection='private',
-                n=1  # We only need the best match
+                query=filename,
+                private_scope=True,
+                company_scope=False
             )
 
             # Extract file ID from search results
