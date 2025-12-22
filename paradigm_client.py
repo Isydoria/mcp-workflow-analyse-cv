@@ -1008,11 +1008,13 @@ class ParadigmClient:
             session = await self._get_session()
 
             # Build query parameters
+            # Note: Testing different parameter names to find the right one
             params = {}
             if private is not None:
-                params['private_scope'] = str(private).lower()
+                # Try without '_scope' suffix
+                params['private'] = 'true' if private else 'false'
             if workspace_id is not None:
-                params['workspace_scope'] = workspace_id
+                params['workspace_id'] = workspace_id
 
             url = f"{self.base_url}/api/v2/files"
             headers = {
@@ -1020,7 +1022,7 @@ class ParadigmClient:
                 "Content-Type": "application/json"
             }
 
-            logger.info(f"📋 Listing files...")
+            logger.info(f"📋 Listing files with params: {params}...")
 
             async with session.get(url, headers=headers, params=params) as response:
                 if response.status == 200:
