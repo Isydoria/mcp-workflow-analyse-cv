@@ -107,6 +107,10 @@ async def _resolve_paradigm_filenames(
     # Create a mapping of filename -> file_id
     filename_to_id = {}
     for file in all_files:
+        # Log first file to see structure
+        if len(filename_to_id) == 0:
+            logger.info(f"🔍 First file structure: {file}")
+
         file_name = file.get('filename') or file.get('name')
         file_id = file.get('id')
         if file_name and file_id:
