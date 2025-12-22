@@ -73,14 +73,57 @@ class AnalyseResponse(BaseModel):
     status: str = Field(..., description="Execution status")
 
 
-# FastAPI endpoint
-@app.post(
-    "/analyse-cv",
-    operation_id="analyse_cv",
-    summary="Analyse et compare des CVs",
-    description="Analyse et compare automatiquement 5 CV par rapport à une fiche de poste, en évaluant chaque candidat selon des critères pondérés et génère un rapport professionnel avec scores et recommandations.",
-    response_model=AnalyseResponse
-)
+# Helper function for resolving Paradigm filenames to IDs
+async def _resolve_paradigm_filenames(
+    paradigm_client: ParadigmClient,
+    filenames: List[str]
+) -> List[int]:
+    """
+    Resolve Paradigm document filenames to their IDs by searching in the user's workspace.
+
+    This function searches for documents by exact filename match.
+
+    Args:
+        paradigm_client: Initialized Paradigm client
+        filenames: List of document filenames to resolve
+
+    Returns:
+        List of resolved file IDs
+
+    Raises:
+        Exception: If any filename cannot be resolved
+    """
+    file_ids = []
+
+    for filename in filenames:
+        try:
+            # Use document search to find the file
+            # Search for exact filename in user's private collection
+            search_results = await paradigm_client.document_search(
+                query=f"filename:{filename}",
+                collection='private',
+                n=1  # We only need the best match
+            )
+
+            # Extract file ID from search results
+            if search_results and 'chunks' in search_results and len(search_results['chunks']) > 0:
+                chunk = search_results['chunks'][0]
+                file_id = chunk.get('file_id') or chunk.get('id')
+                if file_id:
+                    file_ids.append(int(file_id))
+                    logger.info(f"✅ Resolved '{filename}' to file ID: {file_id}")
+                else:
+                    raise Exception(f"Could not extract file ID for: {filename}")
+            else:
+                raise Exception(f"Document not found: {filename}")
+
+        except Exception as e:
+            logger.error(f"❌ Failed to resolve filename '{filename}': {str(e)}")
+            raise Exception(f"Failed to resolve document '{filename}': {str(e)}")
+
+    return file_ids
+
+
 async def analyse_cv(request: AnalyseRequest) -> AnalyseResponse:
     """
     Analyse and compare CVs against a job description.
@@ -95,27 +138,46 @@ async def analyse_cv(request: AnalyseRequest) -> AnalyseResponse:
                 detail="PARADIGM_API_KEY not configured on server"
             )
 
-        # Determine input mode and log
-        if request.file_paths:
-            logger.info(f"Executing workflow with {len(request.file_paths)} file paths")
-        elif request.file_ids:
-            logger.info(f"Executing workflow with {len(request.file_ids)} file IDs")
-
         # Initialize Paradigm client
         paradigm_client = ParadigmClient(
             api_key=PARADIGM_API_KEY,
             base_url=PARADIGM_BASE_URL
         )
 
+        # Determine input mode and handle file resolution
+        file_ids_to_use = []
+
+        if request.file_ids:
+            # Direct file IDs provided
+            logger.info(f"Using {len(request.file_ids)} provided file IDs")
+            file_ids_to_use = request.file_ids
+
+        elif request.file_paths:
+            # Check if file_paths are actually Paradigm document names (no path separators)
+            are_paradigm_names = all('/' not in fp and '\\' not in fp for fp in request.file_paths)
+
+            if are_paradigm_names:
+                # These are Paradigm document names, search for them
+                logger.info(f"Detected {len(request.file_paths)} Paradigm document names, searching for IDs...")
+                file_ids_to_use = await _resolve_paradigm_filenames(
+                    paradigm_client,
+                    request.file_paths
+                )
+                logger.info(f"Resolved to file IDs: {file_ids_to_use}")
+            else:
+                # These are actual file paths, pass them as-is
+                logger.info(f"Using {len(request.file_paths)} local file paths")
+
         # Initialize workflow executor
         executor = WorkflowExecutor(paradigm_client)
 
         # Execute workflow with appropriate parameters
         exec_params = {"query": request.query}
-        if request.file_paths:
+
+        if file_ids_to_use:
+            exec_params["file_ids"] = file_ids_to_use
+        elif request.file_paths:
             exec_params["file_paths"] = request.file_paths
-        if request.file_ids:
-            exec_params["file_ids"] = request.file_ids
 
         result = await executor.execute(**exec_params)
 
