@@ -1007,22 +1007,21 @@ class ParadigmClient:
         try:
             session = await self._get_session()
 
-            # Build query parameters - testing without any filters
+            # Build query parameters for v3 API
             params = {}
-            # Temporarily disable all filters to see what's available
-            # if private is not None:
-            #     params['private_scope'] = 'true' if private else 'false'
-            #     params['company_scope'] = 'false'
-            # if workspace_id is not None:
-            #     params['workspace_scope'] = workspace_id
+            if private is not None:
+                # v3 API uses 'private' boolean parameter
+                params['private'] = private
+            if workspace_id is not None:
+                params['workspace_id'] = workspace_id
 
-            url = f"{self.base_url}/api/v2/files"
+            url = f"{self.base_url}/api/v3/files"
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
 
-            logger.info(f"📋 Listing ALL files (no filter) to debug...")
+            logger.info(f"📋 Listing files using v3 API with params: {params}")
 
             async with session.get(url, headers=headers, params=params) as response:
                 if response.status == 200:
