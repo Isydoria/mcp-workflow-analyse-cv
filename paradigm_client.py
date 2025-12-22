@@ -1007,14 +1007,14 @@ class ParadigmClient:
         try:
             session = await self._get_session()
 
-            # Build query parameters
-            # Based on Swagger docs: use private_scope and company_scope
+            # Build query parameters - testing without any filters
             params = {}
-            if private is not None:
-                params['private_scope'] = 'true' if private else 'false'
-                params['company_scope'] = 'false'  # Exclude company files
-            if workspace_id is not None:
-                params['workspace_scope'] = workspace_id
+            # Temporarily disable all filters to see what's available
+            # if private is not None:
+            #     params['private_scope'] = 'true' if private else 'false'
+            #     params['company_scope'] = 'false'
+            # if workspace_id is not None:
+            #     params['workspace_scope'] = workspace_id
 
             url = f"{self.base_url}/api/v2/files"
             headers = {
@@ -1022,7 +1022,7 @@ class ParadigmClient:
                 "Content-Type": "application/json"
             }
 
-            logger.info(f"📋 Listing files with params: {params}...")
+            logger.info(f"📋 Listing ALL files (no filter) to debug...")
 
             async with session.get(url, headers=headers, params=params) as response:
                 if response.status == 200:
