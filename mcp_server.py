@@ -82,9 +82,9 @@ async def _resolve_paradigm_filenames(
     filenames: List[str]
 ) -> List[int]:
     """
-    Resolve Paradigm document filenames to their IDs by searching in the user's workspace.
+    Resolve Paradigm document filenames to their IDs by listing user files.
 
-    This function searches for documents by exact filename match.
+    This function fetches the list of user files and matches by exact filename.
 
     Args:
         paradigm_client: Initialized Paradigm client
@@ -96,33 +96,35 @@ async def _resolve_paradigm_filenames(
     Raises:
         Exception: If any filename cannot be resolved
     """
+    # Get list of all user files
+    try:
+        all_files = await paradigm_client.list_files(private=True)
+        logger.info(f"📋 Retrieved {len(all_files)} files from user workspace")
+    except Exception as e:
+        logger.error(f"❌ Failed to list files: {str(e)}")
+        raise Exception(f"Failed to list user files: {str(e)}")
+
+    # Create a mapping of filename -> file_id
+    filename_to_id = {}
+    for file in all_files:
+        file_name = file.get('filename') or file.get('name')
+        file_id = file.get('id')
+        if file_name and file_id:
+            filename_to_id[file_name] = file_id
+
+    logger.info(f"📝 File mapping created with {len(filename_to_id)} entries")
+
+    # Resolve each requested filename
     file_ids = []
-
     for filename in filenames:
-        try:
-            # Use document search to find the file
-            # Search for exact filename in user's private documents
-            search_results = await paradigm_client.document_search(
-                query=filename,
-                private_scope=True,
-                company_scope=False
-            )
-
-            # Extract file ID from search results
-            if search_results and 'chunks' in search_results and len(search_results['chunks']) > 0:
-                chunk = search_results['chunks'][0]
-                file_id = chunk.get('file_id') or chunk.get('id')
-                if file_id:
-                    file_ids.append(int(file_id))
-                    logger.info(f"✅ Resolved '{filename}' to file ID: {file_id}")
-                else:
-                    raise Exception(f"Could not extract file ID for: {filename}")
-            else:
-                raise Exception(f"Document not found: {filename}")
-
-        except Exception as e:
-            logger.error(f"❌ Failed to resolve filename '{filename}': {str(e)}")
-            raise Exception(f"Failed to resolve document '{filename}': {str(e)}")
+        if filename in filename_to_id:
+            file_id = filename_to_id[filename]
+            file_ids.append(file_id)
+            logger.info(f"✅ Resolved '{filename}' to file ID: {file_id}")
+        else:
+            logger.error(f"❌ File not found: '{filename}'")
+            logger.info(f"Available files: {list(filename_to_id.keys())[:10]}...")
+            raise Exception(f"Document not found: {filename}")
 
     return file_ids
 

@@ -984,6 +984,59 @@ class ParadigmClient:
             logger.error(f"❌ Get file error: {str(e)}")
             raise
 
+    async def list_files(
+        self,
+        private: Optional[bool] = None,
+        workspace_id: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        List available documents for the user.
+
+        Args:
+            private: Filter by private documents (True) or company documents (False)
+            workspace_id: Filter by specific workspace ID
+
+        Returns:
+            List[Dict]: List of file objects with id, filename, etc.
+
+        Example:
+            files = await paradigm.list_files(private=True)
+            for file in files:
+                print(f"{file['id']}: {file['filename']}")
+        """
+        try:
+            session = await self._get_session()
+
+            # Build query parameters
+            params = {}
+            if private is not None:
+                params['private'] = str(private).lower()
+            if workspace_id is not None:
+                params['workspace_id'] = workspace_id
+
+            url = f"{self.base_url}/api/v2/files"
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+
+            logger.info(f"📋 Listing files...")
+
+            async with session.get(url, headers=headers, params=params) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    files = result if isinstance(result, list) else result.get('files', [])
+                    logger.info(f"✅ Retrieved {len(files)} files")
+                    return files
+                else:
+                    error_text = await response.text()
+                    logger.error(f"❌ List files failed: {response.status}")
+                    raise Exception(f"List files API error {response.status}: {error_text}")
+
+        except Exception as e:
+            logger.error(f"❌ List files error: {str(e)}")
+            raise
+
     async def wait_for_embedding(
         self,
         file_id: int,
