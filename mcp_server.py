@@ -105,6 +105,7 @@ async def _resolve_paradigm_filenames(
         raise Exception(f"Failed to list user files: {str(e)}")
 
     # Create a mapping of filename -> file_id
+    # Store both with and without extension for flexible matching
     filename_to_id = {}
     for file in all_files:
         # Log first file to see structure
@@ -114,9 +115,19 @@ async def _resolve_paradigm_filenames(
         file_name = file.get('filename') or file.get('name')
         file_id = file.get('id')
         if file_name and file_id:
+            # Store with full filename
             filename_to_id[file_name] = file_id
 
-    logger.info(f"📝 File mapping created with {len(filename_to_id)} entries")
+            # Also store without extension (for cases like "CV_Sophie_BERNARD" vs "CV_Sophie_BERNARD.pdf")
+            name_without_ext = file_name.rsplit('.', 1)[0] if '.' in file_name else file_name
+            if name_without_ext != file_name:
+                filename_to_id[name_without_ext] = file_id
+
+            # Also store with .pdf extension added (if not already present)
+            if not file_name.endswith('.pdf'):
+                filename_to_id[file_name + '.pdf'] = file_id
+
+    logger.info(f"📝 File mapping created with {len(filename_to_id)} entries (including variants)")
 
     # Resolve each requested filename
     file_ids = []
