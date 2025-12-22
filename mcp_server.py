@@ -135,6 +135,9 @@ async def analyse_cv(request: AnalyseRequest) -> AnalyseResponse:
     This endpoint executes a complete workflow using the LightOn Paradigm API.
     """
     try:
+        # Log incoming request for debugging
+        logger.info(f"📨 Received request: file_paths={request.file_paths}, file_ids={request.file_ids}, query={request.query}")
+
         # Validate Paradigm API key
         if not PARADIGM_API_KEY:
             raise HTTPException(
