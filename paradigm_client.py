@@ -1023,22 +1023,41 @@ class ParadigmClient:
 
             logger.info(f"📋 Listing files using v3 API with params: {params}")
 
-            async with session.get(url, headers=headers, params=params) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    # v3 API returns: {"count": N, "next": url, "previous": url, "results": [[...]]}
-                    # Note: results is a list containing a single list of files
-                    results = result.get('results', [])
-                    if results and isinstance(results[0], list):
-                        files = results[0]  # Extract the nested list
+            # Fetch all pages (v3 API is paginated)
+            all_files = []
+            current_url = url
+            page_num = 1
+
+            while current_url:
+                async with session.get(current_url, headers=headers, params=params if page_num == 1 else {}) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        # v3 API returns: {"count": N, "next": url, "previous": url, "results": [[...]]}
+                        # Note: results is a list containing a single list of files
+                        results = result.get('results', [])
+                        if results and isinstance(results[0], list):
+                            page_files = results[0]  # Extract the nested list
+                        else:
+                            page_files = results
+
+                        all_files.extend(page_files)
+                        logger.info(f"✅ Page {page_num}: Retrieved {len(page_files)} files (total so far: {len(all_files)})")
+
+                        # Check for next page
+                        current_url = result.get('next')
+                        page_num += 1
+
+                        # Safety limit to avoid infinite loops
+                        if page_num > 100:
+                            logger.warning(f"⚠️ Stopped at page 100 to avoid infinite loop")
+                            break
                     else:
-                        files = results
-                    logger.info(f"✅ Retrieved {len(files)} files using v3 API")
-                    return files
-                else:
-                    error_text = await response.text()
-                    logger.error(f"❌ List files failed: {response.status}")
-                    raise Exception(f"List files API error {response.status}: {error_text}")
+                        error_text = await response.text()
+                        logger.error(f"❌ List files failed: {response.status}")
+                        raise Exception(f"List files API error {response.status}: {error_text}")
+
+            logger.info(f"✅ Retrieved {len(all_files)} total files across {page_num} pages using v3 API")
+            return all_files
 
         except Exception as e:
             logger.error(f"❌ List files error: {str(e)}")
