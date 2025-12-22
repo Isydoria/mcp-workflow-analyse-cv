@@ -107,10 +107,18 @@ async def _resolve_paradigm_filenames(
         logger.error(f"❌ Failed to list files: {str(e)}")
         raise Exception(f"Failed to list user files: {str(e)}")
 
+    # Sort files by upload date (most recent first) to prioritize recently uploaded files
+    all_files_sorted = sorted(
+        all_files,
+        key=lambda f: f.get('uploaded_at', ''),
+        reverse=True
+    )
+    logger.info(f"📅 Most recent file: {all_files_sorted[0].get('filename')} uploaded at {all_files_sorted[0].get('uploaded_at')}")
+
     # Create a mapping of filename -> file_id
     # Store both with and without extension for flexible matching
     filename_to_id = {}
-    for file in all_files:
+    for file in all_files_sorted:
         # Log first file to see structure
         if len(filename_to_id) == 0:
             logger.info(f"🔍 First file structure: {file}")
