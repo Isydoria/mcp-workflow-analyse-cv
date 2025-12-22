@@ -127,7 +127,7 @@ async def _resolve_paradigm_filenames(
     return file_ids
 
 
-@mcp.tool()
+@app.post("/analyse_cv", response_model=AnalyseResponse, operation_id="analyse_cv")
 async def analyse_cv(request: AnalyseRequest) -> AnalyseResponse:
     """
     Analyse and compare CVs against a job description.
