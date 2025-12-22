@@ -207,6 +207,9 @@ async def health():
     return {"status": "healthy"}
 
 
+# Re-register all tools after defining endpoints
+mcp.setup_server()
+
 # Mount MCP HTTP endpoint
 mcp.mount_http()
 
