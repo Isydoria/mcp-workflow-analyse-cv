@@ -1010,8 +1010,8 @@ class ParadigmClient:
             # Build query parameters for v3 API
             params = {}
             if private is not None:
-                # v3 API uses 'private' boolean parameter
-                params['private'] = private
+                # v3 API expects string 'true' or 'false', not boolean
+                params['private'] = 'true' if private else 'false'
             if workspace_id is not None:
                 params['workspace_id'] = workspace_id
 
