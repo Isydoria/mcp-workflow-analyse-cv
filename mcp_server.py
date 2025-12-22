@@ -64,6 +64,9 @@ class AnalyseRequest(BaseModel):
         description="Question ou demande d'analyse (optionnel)"
     )
 
+    class Config:
+        extra = "allow"  # Allow additional fields from Paradigm MCP
+
     def model_post_init(self, __context) -> None:
         """Validate that at least one file input method is provided"""
         if not self.file_paths and not self.file_ids:
@@ -154,6 +157,10 @@ async def analyse_cv(request: AnalyseRequest) -> AnalyseResponse:
     try:
         # Log incoming request for debugging
         logger.info(f"📨 Received request: file_paths={request.file_paths}, file_ids={request.file_ids}, query={request.query}")
+
+        # Log ALL fields in the request (including extra fields from Paradigm)
+        request_dict = request.model_dump()
+        logger.info(f"🔍 Full request dump: {request_dict}")
 
         # Validate Paradigm API key
         if not PARADIGM_API_KEY:
