@@ -1008,13 +1008,13 @@ class ParadigmClient:
             session = await self._get_session()
 
             # Build query parameters
-            # Note: Testing different parameter names to find the right one
+            # Based on Swagger docs: use private_scope and company_scope
             params = {}
             if private is not None:
-                # Try without '_scope' suffix
-                params['private'] = 'true' if private else 'false'
+                params['private_scope'] = 'true' if private else 'false'
+                params['company_scope'] = 'false'  # Exclude company files
             if workspace_id is not None:
-                params['workspace_id'] = workspace_id
+                params['workspace_scope'] = workspace_id
 
             url = f"{self.base_url}/api/v2/files"
             headers = {
