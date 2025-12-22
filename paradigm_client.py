@@ -1010,9 +1010,9 @@ class ParadigmClient:
             # Build query parameters
             params = {}
             if private is not None:
-                params['private'] = str(private).lower()
+                params['private_scope'] = str(private).lower()
             if workspace_id is not None:
-                params['workspace_id'] = workspace_id
+                params['workspace_scope'] = workspace_id
 
             url = f"{self.base_url}/api/v2/files"
             headers = {

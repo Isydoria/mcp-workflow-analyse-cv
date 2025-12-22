@@ -96,10 +96,10 @@ async def _resolve_paradigm_filenames(
     Raises:
         Exception: If any filename cannot be resolved
     """
-    # Get list of all user files (try without filters to get all scopes)
+    # Get list of private user files
     try:
-        all_files = await paradigm_client.list_files()
-        logger.info(f"📋 Retrieved {len(all_files)} files from all scopes")
+        all_files = await paradigm_client.list_files(private=True)
+        logger.info(f"📋 Retrieved {len(all_files)} private files")
     except Exception as e:
         logger.error(f"❌ Failed to list files: {str(e)}")
         raise Exception(f"Failed to list user files: {str(e)}")
