@@ -1026,9 +1026,14 @@ class ParadigmClient:
             async with session.get(url, headers=headers, params=params) as response:
                 if response.status == 200:
                     result = await response.json()
-                    # API returns: {"object": "list", "data": [...], "count": N}
-                    files = result.get('data', [])
-                    logger.info(f"✅ Retrieved {len(files)} files")
+                    # v3 API returns: {"count": N, "next": url, "previous": url, "results": [[...]]}
+                    # Note: results is a list containing a single list of files
+                    results = result.get('results', [])
+                    if results and isinstance(results[0], list):
+                        files = results[0]  # Extract the nested list
+                    else:
+                        files = results
+                    logger.info(f"✅ Retrieved {len(files)} files using v3 API")
                     return files
                 else:
                     error_text = await response.text()
